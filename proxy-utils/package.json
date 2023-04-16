@@ -1,0 +1,12 @@
+{
+  "name": "proxy-utils",
+  "version": "1.0.0",
+  "main": "proxy_manager.js",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^3.3.1"
+  },
+  "devDependencies": {
+    "proxy-utils": "^1.0.1"
+  }
+}
