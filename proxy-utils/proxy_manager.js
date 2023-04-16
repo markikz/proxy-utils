@@ -1,28 +1,66 @@
 class ProxyUtils {
     constructor(proxyHotsPool, proxy_key) {
-        this.proxyHotsPool = proxyHotsPool;
+        this.proxyPool = [];
+        this.aliveProxies = [];
+        if (proxyHotsPool && proxyHotsPool.length) {
+            proxyHotsPool.forEach(proxy => console.log(`Proxy change state to UP: ${ proxy }`));
+            this.proxyPool = [...proxyHotsPool];
+            this.aliveProxies = [...this.proxyPool];
+        }
+        this.timedOutProxies = [];
         this.proxy_key = proxy_key;
         this.priceOverviewCalls = 0;
-        this.steamAPIThreads = new Array(this.proxyHotsPool.length);
     }
 
-    test() {
-        return this.proxyHotsPool;
+    getAliveProxies() {
+        return this.aliveProxies;
+    }
+
+    composeUrl(url, proxy) {
+        return `${ proxy }/redirect?address=${ encodeURIComponent(url) }&key=${ this.proxy_key }`;
+    }
+
+    getNextProxy() {
+        this.priceOverviewCalls++;
+        return this.aliveProxies[this.priceOverviewCalls % this.aliveProxies.length];
+    }
+
+    timeoutProxy(proxy) {
+        if (!proxy || this.timedOutProxies.includes(proxy))
+            return;
+
+        console.log(`Proxy change state to TIMEOUT: ${ proxy }`);
+
+        this.timedOutProxies.push(proxy);
+        setTimeout(() => {
+            console.log(`Proxy change state to UP: ${ proxy }`);
+            this.aliveProxies.push(proxy);
+        }, 60 * 60 * 1000);
     }
 
     fetch(url) {
-        let t = this.proxyHotsPool[0] + '/redirect?address=' + encodeURIComponent(url) + "&proxy_key=" + this.proxy_key;
-        console.log(t);
-        return fetch(t)
+        if (!this.aliveProxies.length){
+            return Promise.resolve('{"success": false, "error": "proxy pool is empty"}');
+        }
+
+        const proxy = this.getNextProxy();
+        const urlToFetch = this.composeUrl(url, proxy);
+
+        console.log({urlToFetch});
+
+        return fetch(urlToFetch)
             .then(res => {
+                if (res.status === 429) {
+                    this.timeoutProxy(this.aliveProxies.splice(this.aliveProxies.indexOf(proxy)));
+                    return this.fetch(url);
+                }
                 return res.json();
             })
             .catch(error => {
-                console.error('------------------------------------------------getPrice: ' + error);
-                return "123";
+                console.error('------------------------------------------------ProxyUtils.fetch: ' + error);
+                return Promise.resolve(`{"success": false, "error": "${ error }"}`);
             });
     }
-
 }
 
 module.exports = ProxyUtils;
