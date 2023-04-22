@@ -25,7 +25,8 @@ class ProxyUtils {
         return this.aliveProxies[this.priceOverviewCalls % this.aliveProxies.length];
     }
 
-    timeoutProxy(proxy) {
+    timeoutProxy(proxyArr) {
+        const proxy = proxyArr[0];
         if (!proxy || this.timedOutProxies.includes(proxy))
             return;
 
@@ -55,6 +56,30 @@ class ProxyUtils {
                     return this.fetch(url);
                 }
                 return res.json();
+            })
+            .catch(error => {
+                console.error('------------------------------------------------ProxyUtils.fetch: ' + error);
+                return Promise.resolve(`{"success": false, "error": "${ error }"}`);
+            });
+    }
+
+    fetchText(url) {
+        if (!this.aliveProxies.length){
+            return Promise.resolve('{"success": false, "error": "proxy pool is empty"}');
+        }
+
+        const proxy = this.getNextProxy();
+        const urlToFetch = this.composeUrl(url, proxy);
+
+        console.log({urlToFetch});
+
+        return fetch(urlToFetch)
+            .then(res => {
+                if (res.status === 429) {
+                    this.timeoutProxy(this.aliveProxies.splice(this.aliveProxies.indexOf(proxy)));
+                    return this.fetch(url);
+                }
+                return res.text();
             })
             .catch(error => {
                 console.error('------------------------------------------------ProxyUtils.fetch: ' + error);
