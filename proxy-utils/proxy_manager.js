@@ -25,10 +25,10 @@ class ProxyUtils {
         return this.aliveProxies[this.priceOverviewCalls % this.aliveProxies.length];
     }
 
-    timeoutProxy(proxyArr) {
-        const proxy = proxyArr[0];
+    timeoutProxy(proxy) {
         if (!proxy || this.timedOutProxies.includes(proxy))
             return;
+        this.aliveProxies.splice(this.aliveProxies.indexOf(proxy))
 
         console.log(`Proxy change state to TIMEOUT: ${ proxy }`);
 
@@ -52,7 +52,7 @@ class ProxyUtils {
         return fetch(urlToFetch)
             .then(res => {
                 if (res.status === 429) {
-                    this.timeoutProxy(this.aliveProxies.splice(this.aliveProxies.indexOf(proxy)));
+                    this.timeoutProxy(proxy);
                     return this.fetch(url);
                 }
                 return res.json();
@@ -77,7 +77,7 @@ class ProxyUtils {
             .then(res => {
                 if (res.status === 429) {
                     this.timeoutProxy(this.aliveProxies.splice(this.aliveProxies.indexOf(proxy)));
-                    return this.fetch(url);
+                    return this.fetchText(url);
                 }
                 return res.text();
             })
