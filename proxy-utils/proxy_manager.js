@@ -79,7 +79,7 @@ class ProxyUtils {
                     this.timeoutProxy(this.aliveProxies.splice(this.aliveProxies.indexOf(proxy)));
                     return this.fetchText(url);
                 }
-                return res.text();
+                return { success: true, text: res.text()};
             })
             .catch(error => {
                 console.error('------------------------------------------------ProxyUtils.fetch: ' + error);
